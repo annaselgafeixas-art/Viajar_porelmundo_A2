@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>¡Viajamos! — Vocabulario de viajes en español</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --sky: #1a6fad;
+    --sky-light: #e8f4fd;
+    --sun: #f5a623;
+    --sun-warm: #fff3d6;
+    --land: #3a9c6f;
+    --land-light: #e6f7ef;
+    --coral: #e8604c;
+    --coral-light: #fdecea;
+    --ink: #1c2b3a;
+    --mist: #8fa3b1;
+    --white: #ffffff;
+    --page: #f7f4ef;
+    --stamp-green: #2e7d55;
+    --stamp-red: #c0392b;
+    --radius: 12px;
+    --shadow: 0 4px 20px rgba(28,43,58,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--page);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* ── AUDIO TOOLBAR ── */
+  #audio-toolbar {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+  .audio-btn {
+    background: var(--ink);
+    color: var(--white);
+    border: none;
+    border-radius: 50px;
+    padding: 10px 18px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(28,43,58,0.25);
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .audio-btn:hover { background: #0f1d2a; transform: translateY(-1px); }
+  .audio-btn:active { transform: scale(0.97); }
+  .audio-btn.playing { background: var(--coral); }
+  .audio-btn.muted { background: var(--mist); }
+  #btn-repeat { background: var(--sky); }
+  #btn-repeat:hover { background: #1559a0; }
+
+  /* speaking indicator */
+  .speaking-dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--sun);
+    animation: pulse 0.6s ease-in-out infinite alternate;
+    margin-left: 2px;
+  }
+  @keyframes pulse { from { opacity: 0.4; transform: scale(0.8); } to { opacity: 1; transform: scale(1.2); } }
+
+  /* ── HEADER BAR ── */
+  #game-header {
+    background: var(--sky);
+    color: var(--white);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(26,111,173,0.25);
+  }
+  #game-header .logo { font-family: 'Playfair Display', serif; font-size: 1.3rem; letter-spacing: 0.5px; }
+  #game-header .logo span { color: var(--sun); }
+  .header-stats { display: flex; align-items: center; gap: 20px; font-size: 0.88rem; }
+  .stat-pill {
+    background: rgba(255,255,255,0.18);
+    border-radius: 20px;
+    padding: 4px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #progress-wrap { background: var(--sky); padding: 0 24px 12px; }
+  .progress-track { background: rgba(255,255,255,0.25); border-radius: 8px; height: 8px; overflow: hidden; }
+  .progress-fill { background: var(--sun); height: 100%; border-radius: 8px; transition: width 0.5s ease; }
+  .progress-label { font-size: 0.75rem; color: rgba(255,255,255,0.8); margin-top: 4px; }
+
+  /* ── START SCREEN ── */
+  #start-screen { max-width: 680px; margin: 40px auto; padding: 0 20px; text-align: center; }
+  .globe-emoji { font-size: 5rem; margin-bottom: 16px; line-height: 1; }
+  .start-title { font-family: 'Playfair Display', serif; font-size: 2.6rem; color: var(--sky); margin-bottom: 8px; }
+  .start-subtitle { font-size: 1.05rem; color: var(--mist); margin-bottom: 32px; line-height: 1.5; }
+
+  .level-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+  .level-card {
+    border: 2px solid transparent;
+    border-radius: var(--radius);
+    padding: 20px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--white);
+    box-shadow: var(--shadow);
+  }
+  .level-card:hover { transform: translateY(-3px); }
+  .level-card.selected { border-color: var(--sky); background: var(--sky-light); }
+  .level-card .level-icon { font-size: 2rem; margin-bottom: 8px; }
+  .level-card .level-name { font-weight: 600; font-size: 1rem; margin-bottom: 4px; }
+  .level-card .level-desc { font-size: 0.8rem; color: var(--mist); line-height: 1.4; }
+  .level-card[data-level="easy"] .level-name { color: var(--land); }
+  .level-card[data-level="medium"] .level-name { color: var(--sun); }
+  .level-card[data-level="hard"] .level-name { color: var(--coral); }
+
+  .route-preview { background: var(--white); border-radius: var(--radius); padding: 20px; margin-bottom: 28px; box-shadow: var(--shadow); text-align: left; }
+  .route-preview h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--mist); margin-bottom: 12px; }
+  .route-flags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .route-flag { background: var(--sky-light); border-radius: 20px; padding: 4px 12px; font-size: 0.88rem; color: var(--sky); }
+
+  /* audio notice on start */
+  .audio-notice {
+    background: var(--sun-warm);
+    border: 1px solid var(--sun);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    font-size: 0.88rem;
+    color: #6b4700;
+    text-align: left;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .audio-notice .an-icon { font-size: 1.3rem; flex-shrink: 0; }
+
+  .btn-start {
+    background: var(--sky);
+    color: var(--white);
+    border: none;
+    border-radius: var(--radius);
+    padding: 16px 48px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0.5px;
+  }
+  .btn-start:hover { background: #1559a0; transform: translateY(-1px); }
+
+  /* ── PASSPORT SCREEN ── */
+  #passport-screen { max-width: 680px; margin: 36px auto; padding: 0 20px; text-align: center; }
+  .passport-book {
+    background: #1c2b6e;
+    border-radius: 16px;
+    padding: 32px 28px;
+    color: var(--white);
+    box-shadow: 0 8px 32px rgba(28,43,110,0.3);
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .passport-book::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 4px;
+    background: linear-gradient(90deg, var(--sun), var(--coral), var(--land), var(--sky));
+  }
+  .passport-title-text { font-family: 'Playfair Display', serif; font-size: 1.4rem; margin-bottom: 4px; letter-spacing: 2px; }
+  .passport-subtitle-text { font-size: 0.75rem; letter-spacing: 3px; color: rgba(255,255,255,0.6); margin-bottom: 24px; }
+  .stamps-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+  .stamp-slot {
+    width: 100%; aspect-ratio: 1;
+    border: 2px dashed rgba(255,255,255,0.2);
+    border-radius: 8px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-size: 0.7rem; color: rgba(255,255,255,0.3); gap: 4px; transition: all 0.3s;
+  }
+  .stamp-slot.earned { border: 2px solid var(--sun); background: rgba(245,166,35,0.1); color: var(--white); animation: stampIn 0.4s ease; }
+  .stamp-slot.earned .stamp-flag { font-size: 1.5rem; }
+  .stamp-slot.earned .stamp-word { font-size: 0.65rem; font-weight: 600; color: var(--sun); }
+  @keyframes stampIn {
+    0% { transform: scale(0) rotate(-15deg); opacity: 0; }
+    60% { transform: scale(1.15) rotate(3deg); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+
+  /* ── DESTINATION SCREEN ── */
+  #destination-screen { max-width: 680px; margin: 0 auto; padding: 24px 20px; }
+  .dest-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 24px; background: var(--white);
+    border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow);
+  }
+  .dest-flag { font-size: 3rem; line-height: 1; }
+  .dest-info h2 { font-family: 'Playfair Display', serif; font-size: 1.6rem; color: var(--sky); }
+  .dest-info p { font-size: 0.88rem; color: var(--mist); }
+  .dest-word-badge {
+    margin-left: auto; background: var(--sky); color: var(--white);
+    border-radius: 8px; padding: 8px 16px; text-align: center;
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.5px;
+  }
+  .dest-word-badge .badge-word { font-size: 1.2rem; display: block; margin-top: 2px; }
+
+  .q-dots { display: flex; gap: 8px; margin-bottom: 20px; justify-content: center; }
+  .q-dot { width: 32px; height: 8px; border-radius: 4px; background: rgba(26,111,173,0.15); transition: background 0.3s; }
+  .q-dot.active { background: var(--sky); }
+  .q-dot.done { background: var(--land); }
+  .q-dot.wrong { background: var(--coral); }
+
+  .question-card { background: var(--white); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  .q-type-tag {
+    display: inline-block; font-size: 0.72rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px; padding: 3px 10px;
+    border-radius: 20px; margin-bottom: 14px;
+  }
+  .q-type-tag.mc { background: var(--sky-light); color: var(--sky); }
+  .q-type-tag.write { background: var(--sun-warm); color: #8a5e00; }
+
+  .question-text { font-size: 1.1rem; line-height: 1.5; margin-bottom: 8px; font-weight: 500; }
+  .question-context { font-size: 0.85rem; color: var(--mist); margin-bottom: 20px; font-style: italic; }
+
+  /* read-aloud button on question */
+  .btn-read-question {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--sky-light);
+    color: var(--sky);
+    border: none;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    margin-bottom: 16px;
+    transition: background 0.15s;
+  }
+  .btn-read-question:hover { background: #cce3f5; }
+  .btn-read-question.speaking { background: var(--sun-warm); color: #8a5e00; }
+
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .option-btn {
+    background: var(--page); border: 2px solid rgba(26,111,173,0.15);
+    border-radius: 10px; padding: 14px 16px; text-align: left;
+    cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.95rem;
+    font-weight: 500; color: var(--ink); transition: all 0.15s;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .option-btn:hover:not(:disabled) { border-color: var(--sky); background: var(--sky-light); }
+  .option-btn.correct { background: var(--land-light); border-color: var(--land); color: var(--stamp-green); }
+  .option-btn.wrong { background: var(--coral-light); border-color: var(--coral); color: var(--stamp-red); }
+  .option-btn:disabled { cursor: default; }
+  .option-letter {
+    width: 26px; height: 26px; background: rgba(26,111,173,0.12);
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.78rem; font-weight: 700; flex-shrink: 0;
+  }
+
+  .write-input-wrap { display: flex; gap: 10px; align-items: stretch; }
+  .write-input {
+    flex: 1; border: 2px solid rgba(26,111,173,0.2); border-radius: 10px;
+    padding: 14px 16px; font-size: 1.05rem; font-family: 'Inter', sans-serif;
+    color: var(--ink); outline: none; background: var(--page); transition: border-color 0.15s;
+  }
+  .write-input:focus { border-color: var(--sky); background: var(--white); }
+  .write-input.correct { border-color: var(--land); background: var(--land-light); }
+  .write-input.wrong { border-color: var(--coral); background: var(--coral-light); }
+  .btn-check {
+    background: var(--sky); color: var(--white); border: none; border-radius: 10px;
+    padding: 14px 22px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    font-family: 'Inter', sans-serif; transition: background 0.15s; white-space: nowrap;
+  }
+  .btn-check:hover { background: #1559a0; }
+
+  .feedback-card {
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 14px;
+    display: none; animation: slideUp 0.3s ease;
+  }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .feedback-card.correct { background: var(--land-light); border-left: 4px solid var(--land); }
+  .feedback-card.wrong { background: var(--coral-light); border-left: 4px solid var(--coral); }
+  .feedback-card.hint { background: var(--sun-warm); border-left: 4px solid var(--sun); }
+  .feedback-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 6px; }
+  .feedback-card.correct .feedback-title { color: var(--stamp-green); }
+  .feedback-card.wrong .feedback-title { color: var(--stamp-red); }
+  .feedback-card.hint .feedback-title { color: #8a5e00; }
+  .feedback-text { font-size: 0.88rem; line-height: 1.5; color: var(--ink); }
+
+  .action-row { display: flex; gap: 10px; margin-top: 4px; }
+  .btn-next {
+    background: var(--sky); color: var(--white); border: none; border-radius: var(--radius);
+    padding: 13px 28px; font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    font-family: 'Inter', sans-serif; flex: 1; transition: background 0.15s; display: none;
+  }
+  .btn-next:hover { background: #1559a0; }
+  .btn-retry {
+    background: var(--white); color: var(--coral); border: 2px solid var(--coral);
+    border-radius: var(--radius); padding: 13px 22px; font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; display: none;
+  }
+  .btn-retry:hover { background: var(--coral-light); }
+
+  /* ── ARRIVAL SCREEN ── */
+  #arrival-screen { max-width: 540px; margin: 40px auto; padding: 0 20px; text-align: center; }
+  .arrival-card { background: var(--white); border-radius: 16px; padding: 36px 32px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .arrival-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 4px; background: var(--land); }
+  .arrival-emoji { font-size: 4rem; margin-bottom: 12px; }
+  .arrival-title { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--land); margin-bottom: 8px; }
+  .arrival-text { font-size: 0.95rem; color: var(--mist); margin-bottom: 20px; }
+  .arrival-stamp { font-size: 3rem; border: 3px solid var(--sun); border-radius: 12px; display: inline-block; padding: 8px 20px; margin-bottom: 20px; animation: stampIn 0.5s ease 0.2s both; }
+  .arrival-word-info { background: var(--sky-light); border-radius: 10px; padding: 16px; margin-bottom: 20px; text-align: left; }
+  .arrival-word-info .word-es { font-size: 1.4rem; font-weight: 700; color: var(--sky); }
+  .arrival-word-info .word-def { font-size: 0.88rem; color: var(--mist); margin-top: 4px; }
+  .btn-continue { background: var(--land); color: var(--white); border: none; border-radius: var(--radius); padding: 14px 40px; font-size: 1rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: background 0.15s; width: 100%; }
+  .btn-continue:hover { background: #2e7d55; }
+
+  /* ── FINAL SCREEN ── */
+  #final-screen { max-width: 680px; margin: 32px auto; padding: 0 20px; }
+  .final-hero { background: linear-gradient(135deg, var(--sky) 0%, #1c4a8a 100%); color: var(--white); border-radius: 16px; padding: 40px 32px; text-align: center; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(26,111,173,0.3); }
+  .final-hero h1 { font-family: 'Playfair Display', serif; font-size: 2.2rem; margin-bottom: 8px; }
+  .final-score { font-size: 4rem; font-weight: 700; color: var(--sun); line-height: 1; margin: 16px 0; }
+  .final-score-label { font-size: 0.9rem; color: rgba(255,255,255,0.7); }
+  .vocab-summary { background: var(--white); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); margin-bottom: 16px; }
+  .vocab-summary h3 { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 1.2px; color: var(--mist); margin-bottom: 16px; }
+  .vocab-table { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+  .vocab-item { background: var(--page); border-radius: 8px; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+  .vocab-item .vi-flag { font-size: 1.2rem; }
+  .vocab-item .vi-word { font-weight: 600; font-size: 0.9rem; }
+  .vocab-item .vi-def { font-size: 0.75rem; color: var(--mist); }
+  .vocab-item.missed { background: var(--coral-light); }
+  .vocab-item.missed .vi-word { color: var(--stamp-red); }
+  .final-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+  .btn-final { flex: 1; min-width: 140px; border-radius: var(--radius); padding: 14px 20px; font-size: 0.95rem; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.15s; border: 2px solid transparent; }
+  .btn-replay { background: var(--sky); color: var(--white); }
+  .btn-replay:hover { background: #1559a0; }
+  .btn-review { background: var(--white); color: var(--coral); border-color: var(--coral); }
+  .btn-review:hover { background: var(--coral-light); }
+  .btn-passport { background: var(--white); color: var(--sky); border-color: var(--sky); }
+  .btn-passport:hover { background: var(--sky-light); }
+
+  .stars { font-size: 2rem; margin-bottom: 8px; }
+
+  @media (max-width: 520px) {
+    .level-cards { grid-template-columns: 1fr; }
+    .options-grid { grid-template-columns: 1fr; }
+    .stamps-grid { grid-template-columns: repeat(4, 1fr); }
+    .start-title { font-size: 2rem; }
+    #audio-toolbar { bottom: 10px; right: 10px; }
+  }
+
+  .confetti-wrap { position: fixed; inset: 0; pointer-events: none; z-index: 999; overflow: hidden; }
+  .confetti-piece { position: absolute; width: 8px; height: 8px; border-radius: 2px; animation: fall linear forwards; opacity: 0; }
+  @keyframes fall {
+    0% { transform: translateY(-40px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="confetti-wrap" id="confetti"></div>
+
+<!-- BARRA DE AUDIO FLOTANTE -->
+<div id="audio-toolbar" style="display:none;">
+  <button class="audio-btn" id="btn-repeat" onclick="repeatLast()" title="Repetir el audio actual">
+    🔁 <span>Repetir</span>
+  </button>
+  <button class="audio-btn" id="btn-mute-toggle" onclick="toggleMute()" title="Activar o desactivar voz">
+    🔊 <span id="mute-label">Voz activa</span>
+  </button>
+</div>
+
+<!-- PANTALLA DE INICIO -->
+<div id="start-screen" class="screen active">
+  <div class="globe-emoji">🌍</div>
+  <h1 class="start-title">¡Viajamos!</h1>
+  <p class="start-subtitle">Un juego de vocabulario de viajes para estudiantes de español A2.<br>¡Recorre el mundo y aprende palabras nuevas!</p>
+
+  <div class="audio-notice">
+    <span class="an-icon">🔊</span>
+    <span>Este juego tiene <strong>voz automática</strong>. Cada pregunta, pista y explicación se leerá en voz alta en español. Usa el botón <strong>Repetir</strong> para escuchar de nuevo, o <strong>Voz activa</strong> para silenciar.</span>
+  </div>
+
+  <div class="level-cards">
+    <div class="level-card selected" data-level="easy">
+      <div class="level-icon">🟢</div>
+      <div class="level-name">Fácil</div>
+      <div class="level-desc">Opción múltiple con pista visible desde el principio</div>
+    </div>
+    <div class="level-card" data-level="medium">
+      <div class="level-icon">🟡</div>
+      <div class="level-name">Medio</div>
+      <div class="level-desc">Opción múltiple, pista solo si te equivocas</div>
+    </div>
+    <div class="level-card" data-level="hard">
+      <div class="level-icon">🔴</div>
+      <div class="level-name">Difícil</div>
+      <div class="level-desc">Escribe la palabra correcta en español</div>
+    </div>
+  </div>
+
+  <div class="route-preview">
+    <h3>Tu ruta de viaje</h3>
+    <div class="route-flags" id="route-flags"></div>
+  </div>
+
+  <button class="btn-start" id="btn-start">¡Empezar el viaje! ✈️</button>
+</div>
+
+<!-- CABECERA DEL JUEGO -->
+<div id="game-header" style="display:none;">
+  <div class="logo">¡<span>Viajamos!</span></div>
+  <div class="header-stats">
+    <div class="stat-pill">⭐ <span id="hdr-score">0</span></div>
+    <div class="stat-pill">🌍 <span id="hdr-dest">1</span>/8</div>
+    <div class="stat-pill" id="hdr-level-pill">🟢 Fácil</div>
+  </div>
+</div>
+<div id="progress-wrap" style="display:none;">
+  <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  <div class="progress-label" id="progress-label">Destino 1 de 8</div>
+</div>
+
+<!-- PANTALLA DE DESTINO -->
+<div id="destination-screen" class="screen">
+  <div class="dest-header">
+    <div class="dest-flag" id="dest-flag">🇪🇸</div>
+    <div class="dest-info">
+      <h2 id="dest-name">España</h2>
+      <p id="dest-sub">Destino 1 de 8</p>
+    </div>
+    <div class="dest-word-badge">
+      Palabra del viaje
+      <span class="badge-word" id="badge-word">pasaporte</span>
+    </div>
+  </div>
+
+  <div class="q-dots" id="q-dots">
+    <div class="q-dot" id="dot-0"></div>
+    <div class="q-dot" id="dot-1"></div>
+    <div class="q-dot" id="dot-2"></div>
+  </div>
+
+  <div class="question-card">
+    <div class="q-type-tag mc" id="q-type-tag">Opción múltiple</div>
+    <div class="question-text" id="question-text">Pregunta...</div>
+    <div class="question-context" id="question-context"></div>
+    <button class="btn-read-question" id="btn-read-q" onclick="repeatLast()">
+      🔊 Escuchar pregunta
+    </button>
+    <div id="options-wrap">
+      <div class="options-grid" id="options-grid"></div>
+    </div>
+    <div id="write-wrap" style="display:none;">
+      <div class="write-input-wrap">
+        <input type="text" class="write-input" id="write-input" placeholder="Escribe la palabra en español…" autocomplete="off" autocorrect="off" spellcheck="false">
+        <button class="btn-check" id="btn-check">Comprobar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="feedback-card hint" id="hint-card">
+    <div class="feedback-title">💡 Pista</div>
+    <div class="feedback-text" id="hint-text"></div>
+  </div>
+  <div class="feedback-card correct" id="correct-card">
+    <div class="feedback-title">✅ ¡Correcto!</div>
+    <div class="feedback-text" id="correct-explanation"></div>
+  </div>
+  <div class="feedback-card wrong" id="wrong-card">
+    <div class="feedback-title">❌ No es correcto</div>
+    <div class="feedback-text" id="wrong-explanation"></div>
+  </div>
+
+  <div class="action-row">
+    <button class="btn-retry" id="btn-retry">🔄 Intentar otra vez</button>
+    <button class="btn-next" id="btn-next">Siguiente →</button>
+  </div>
+</div>
+
+<!-- PANTALLA DE LLEGADA -->
+<div id="arrival-screen" class="screen">
+  <div class="arrival-card">
+    <div class="arrival-emoji" id="arrival-emoji">🎉</div>
+    <h2 class="arrival-title" id="arrival-title">¡Muy bien!</h2>
+    <p class="arrival-text" id="arrival-text"></p>
+    <div class="arrival-stamp" id="arrival-stamp">🇪🇸</div>
+    <div class="arrival-word-info">
+      <div class="word-es" id="arrival-word-es">pasaporte</div>
+      <div class="word-def" id="arrival-word-def">El documento oficial para viajar a otros países.</div>
+    </div>
+    <button class="btn-continue" id="btn-continue">Siguiente destino →</button>
+  </div>
+</div>
+
+<!-- PANTALLA FINAL -->
+<div id="final-screen" class="screen">
+  <div class="final-hero">
+    <div class="stars" id="final-stars">⭐⭐⭐</div>
+    <h1>¡Viaje completado!</h1>
+    <div class="final-score" id="final-score">0</div>
+    <div class="final-score-label" id="final-score-label">puntos</div>
+    <p id="final-message" style="margin-top:12px;font-size:0.95rem;color:rgba(255,255,255,0.85);"></p>
+  </div>
+  <div class="vocab-summary">
+    <h3>Vocabulario aprendido en este viaje</h3>
+    <div class="vocab-table" id="vocab-table"></div>
+  </div>
+  <div class="vocab-summary" id="missed-wrap" style="display:none;">
+    <h3 style="color:var(--stamp-red);">Palabras para practicar más</h3>
+    <div class="vocab-table" id="missed-table"></div>
+  </div>
+  <div class="final-actions">
+    <button class="btn-final btn-replay" id="btn-replay">🔄 Jugar de nuevo</button>
+    <button class="btn-final btn-review" id="btn-review" style="display:none;">📝 Repasar errores</button>
+    <button class="btn-final btn-passport" id="btn-passport-final">📖 Ver pasaporte</button>
+  </div>
+</div>
+
+<!-- PANTALLA DEL PASAPORTE -->
+<div id="passport-screen" class="screen">
+  <div class="passport-book">
+    <div class="passport-title-text">PASAPORTE DE APRENDIZAJE</div>
+    <div class="passport-subtitle-text">VOCABULARIO DE VIAJES · ESPAÑOL A2</div>
+    <div class="stamps-grid" id="stamps-grid"></div>
+  </div>
+  <button class="btn-continue" id="btn-back-from-passport" style="background:var(--sky);">← Volver al resumen</button>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  WEB SPEECH API
+// ══════════════════════════════════════════════
+const TTS = {
+  synth: window.speechSynthesis,
+  muted: false,
+  lastText: '',
+  voice: null,
+  supported: !!window.speechSynthesis,
+
+  // Find best Spanish voice
+  init() {
+    if (!this.supported) return;
+    const load = () => {
+      const voices = this.synth.getVoices();
+      // Prefer es-ES, then es-*, then any Spanish
+      this.voice =
+        voices.find(v => v.lang === 'es-ES') ||
+        voices.find(v => v.lang.startsWith('es-')) ||
+        voices.find(v => v.lang.startsWith('es')) ||
+        null;
+    };
+    load();
+    if (this.synth.onvoiceschanged !== undefined) {
+      this.synth.onvoiceschanged = load;
+    }
+  },
+
+  speak(text, onEnd) {
+    if (!this.supported || this.muted || !text) return;
+    this.synth.cancel();
+    this.lastText = text;
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.lang = 'es-ES';
+    utt.rate = 0.88;
+    utt.pitch = 1.0;
+    if (this.voice) utt.voice = this.voice;
+    utt.onstart = () => setSpeakingIndicator(true);
+    utt.onend = () => { setSpeakingIndicator(false); if (onEnd) onEnd(); };
+    utt.onerror = () => setSpeakingIndicator(false);
+    this.synth.speak(utt);
+  },
+
+  // Speak a sequence of texts with small pauses between them
+  speakSequence(texts, onEnd) {
+    if (!this.supported || this.muted) return;
+    this.synth.cancel();
+    const combined = texts.filter(Boolean).join('. ');
+    this.lastText = combined;
+    this.speak(combined, onEnd);
+  },
+
+  stop() {
+    if (this.supported) this.synth.cancel();
+    setSpeakingIndicator(false);
+  },
+
+  repeat() {
+    if (this.lastText) this.speak(this.lastText);
+  }
+};
+
+function setSpeakingIndicator(on) {
+  const btn = document.getElementById('btn-read-q');
+  if (!btn) return;
+  if (on) {
+    btn.classList.add('speaking');
+    btn.innerHTML = '🔊 Leyendo<span class="speaking-dot"></span>';
+  } else {
+    btn.classList.remove('speaking');
+    btn.innerHTML = '🔊 Escuchar pregunta';
+  }
+}
+
+function repeatLast() { TTS.repeat(); }
+
+function toggleMute() {
+  TTS.muted = !TTS.muted;
+  if (TTS.muted) {
+    TTS.stop();
+    document.getElementById('mute-label').textContent = 'Voz silenciada';
+    document.getElementById('btn-mute-toggle').classList.add('muted');
+  } else {
+    document.getElementById('mute-label').textContent = 'Voz activa';
+    document.getElementById('btn-mute-toggle').classList.remove('muted');
+    TTS.repeat();
+  }
+}
+
+// ══════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════
+const DESTINATIONS = [
+  {
+    country: "España", flag: "🇪🇸", word: "pasaporte",
+    definition: "El documento oficial con tu foto y datos personales que necesitas para viajar a otros países.",
+    questions: [
+      {
+        text: "¿Qué documento necesitas para viajar a otro país?",
+        context: "Estás en el aeropuerto. El oficial en la frontera te pide un documento.",
+        correct: "pasaporte",
+        options: ["pasaporte", "hotel", "maleta", "tren"],
+        hint: "Es un pequeño libro oficial con tu foto y datos personales.",
+        explanation: "El pasaporte es el documento oficial que necesitas para viajar entre países. Sin pasaporte, no puedes pasar la frontera. ¡Siempre llévalo contigo!"
+      },
+      {
+        text: "¿Para qué sirve el pasaporte?",
+        context: "Tu compañero de clase pregunta sobre los documentos de viaje.",
+        correct: "para identificarte en la frontera",
+        options: ["para identificarte en la frontera", "para pagar el hotel", "para comprar billetes", "para guardar el dinero"],
+        hint: "En la frontera, el oficial necesita saber quién eres.",
+        explanation: "El pasaporte sirve para identificarte cuando cruzas la frontera entre países. El oficial comprueba tu nombre, tu foto y tu nacionalidad."
+      },
+      {
+        text: "Completa la frase: 'Necesito mi ______ para viajar a Francia.'",
+        context: "Estás haciendo la maleta para un viaje al extranjero.",
+        correct: "pasaporte",
+        options: ["pasaporte", "billete", "playa", "mapa"],
+        hint: "Es el documento de identidad oficial para viajes internacionales.",
+        explanation: "¡Correcto! Necesito mi pasaporte para viajar a Francia. Para viajar a otro país siempre necesitas llevar el pasaporte."
+      }
+    ]
+  },
+  {
+    country: "Francia", flag: "🇫🇷", word: "billete",
+    definition: "Un documento pequeño que muestra que pagaste para viajar en tren, avión o autobús.",
+    questions: [
+      {
+        text: "¿Qué necesitas para subir al tren o al avión?",
+        context: "Estás en la estación de tren en Francia.",
+        correct: "billete",
+        options: ["billete", "hotel", "playa", "maleta"],
+        hint: "Es un documento pequeño que muestra que pagaste el viaje.",
+        explanation: "Un billete es lo que necesitas para viajar en tren, avión o autobús. Lo compras en la estación, en el aeropuerto o por internet. Sin billete, no puedes subir."
+      },
+      {
+        text: "¿Dónde compras un billete de tren?",
+        context: "Quieres ir en tren de París a Lyon.",
+        correct: "en la estación",
+        options: ["en la estación", "en el aeropuerto", "en el hotel", "en la playa"],
+        hint: "Los trenes salen de un lugar especial en la ciudad. ¿Dónde?",
+        explanation: "Compras el billete de tren en la estación de tren. También puedes comprarlo por internet o en una máquina automática en la estación."
+      },
+      {
+        text: "Completa: 'Compré un ______ de avión a Roma.'",
+        context: "Estás planeando tus próximas vacaciones.",
+        correct: "billete",
+        options: ["billete", "mapa", "restaurante", "museo"],
+        hint: "Es lo que necesitas para subir al avión.",
+        explanation: "¡Perfecto! Compré un billete de avión a Roma. Un billete de avión se llama billete de avión. Un billete de tren se llama billete de tren."
+      }
+    ]
+  },
+  {
+    country: "Italia", flag: "🇮🇹", word: "maleta",
+    definition: "La bolsa grande que usas para llevar tu ropa y cosas personales cuando viajas.",
+    questions: [
+      {
+        text: "¿Qué pones en la maleta cuando viajas?",
+        context: "Estás preparando el equipaje para dos semanas en Italia.",
+        correct: "ropa y cosas personales",
+        options: ["ropa y cosas personales", "billetes de tren", "mapas del metro", "fotos del hotel"],
+        hint: "Una maleta es grande y la llevas al aeropuerto con tus cosas.",
+        explanation: "En la maleta pones tu ropa y tus cosas personales: camisetas, pantalones, zapatos, el cepillo de dientes... todo lo que necesitas para el viaje."
+      },
+      {
+        text: "¿Cómo se llama la bolsa grande que llevas al aeropuerto?",
+        context: "La compañía aérea te pide que pongas tu nombre en el equipaje.",
+        correct: "maleta",
+        options: ["maleta", "billete", "mapa", "playa"],
+        hint: "Empieza con m. Es lo que llevas al aeropuerto con tu ropa.",
+        explanation: "La maleta es la bolsa grande para viajar. Facturar la maleta significa dejarla en el mostrador del aeropuerto. La maleta de mano es la pequeña que llevas contigo."
+      },
+      {
+        text: "Completa: '¡No encuentro mi ______! ¿Dónde está?'",
+        context: "Llegas al aeropuerto de Roma y esperas tu equipaje.",
+        correct: "maleta",
+        options: ["maleta", "pasaporte", "vuelo", "autobús"],
+        hint: "Es la bolsa grande con tu ropa. La esperas en la cinta del aeropuerto.",
+        explanation: "¡Exacto! No encuentro mi maleta. Esto pasa a veces en los aeropuertos. La zona donde recoges la maleta se llama recogida de equipaje."
+      }
+    ]
+  },
+  {
+    country: "Alemania", flag: "🇩🇪", word: "tren",
+    definition: "Un vehículo que viaja por raíles. Es muy popular en Europa para ir de una ciudad a otra.",
+    questions: [
+      {
+        text: "¿Qué vehículo viaja por raíles?",
+        context: "Quieres ir de Berlín a Múnich.",
+        correct: "tren",
+        options: ["tren", "avión", "barco", "autobús"],
+        hint: "Viaja por raíles. El lugar donde para se llama estación.",
+        explanation: "El tren viaja por raíles de metal. En Alemania, los trenes son muy famosos por ser puntuales. Viajar en tren es cómodo y rápido entre ciudades."
+      },
+      {
+        text: "¿Cómo se llama el vehículo que para en una estación?",
+        context: "Tu amigo de España te explica cómo viajar por Europa.",
+        correct: "tren",
+        options: ["tren", "autobús", "vuelo", "barco"],
+        hint: "Es una palabra corta de cuatro letras: T, R, E, N.",
+        explanation: "¡El tren! Para en una estación de tren. El autobús para en una parada o estación de autobús. El avión llega a un aeropuerto."
+      },
+      {
+        text: "Completa: 'El ______ de Berlín a Múnich tarda cuatro horas.'",
+        context: "Buscas el horario de viaje en internet.",
+        correct: "tren",
+        options: ["tren", "metro", "taxi", "bicicleta"],
+        hint: "Es el transporte que va de ciudad en ciudad por raíles.",
+        explanation: "¡Correcto! El tren de Berlín a Múnich tarda cuatro horas. Los trenes entre ciudades son muy cómodos para viajar por Europa."
+      }
+    ]
+  },
+  {
+    country: "Grecia", flag: "🇬🇷", word: "playa",
+    definition: "Un lugar junto al mar con arena. Es perfecto para nadar y relajarse en verano.",
+    questions: [
+      {
+        text: "¿Qué lugar tiene arena y agua del mar?",
+        context: "Ves una foto de Santorini con agua azul y arena blanca.",
+        correct: "la playa",
+        options: ["la playa", "el aeropuerto", "el museo", "la estación"],
+        hint: "Es un lugar con arena y el mar. Vas allí en verano.",
+        explanation: "La playa es un lugar con arena y agua del mar. Grecia es famosa por sus playas preciosas. En la playa puedes nadar, tomar el sol y relajarte."
+      },
+      {
+        text: "¿Cómo se llama el lugar junto al mar con arena?",
+        context: "Reservas unas vacaciones en Grecia.",
+        correct: "playa",
+        options: ["playa", "hotel", "mapa", "restaurante"],
+        hint: "Empieza con p. En verano, muchos turistas van a la...",
+        explanation: "La playa es el lugar con arena junto al mar. Palabras útiles para la playa: toalla, arena, ola, nadar, sombrilla, bronceador."
+      },
+      {
+        text: "Completa: '¿Vamos a la ______ mañana? ¡El mar está muy bonito!'",
+        context: "Tu amigo propone un plan para mañana.",
+        correct: "playa",
+        options: ["playa", "montaña", "ciudad", "selva"],
+        hint: "Es un lugar junto al mar con arena y agua.",
+        explanation: "¡Fantástico! ¿Vamos a la playa mañana? Es una frase muy común en español. Grecia tiene algunas de las playas más bonitas del mundo."
+      }
+    ]
+  },
+  {
+    country: "Egipto", flag: "🇪🇬", word: "museo",
+    definition: "Un edificio donde puedes ver arte, historia o ciencia. Hay museos en todas las ciudades del mundo.",
+    questions: [
+      {
+        text: "¿Dónde puedes ver arte o historia antigua de Egipto?",
+        context: "Estás en El Cairo y quieres ver los tesoros de los faraones.",
+        correct: "en un museo",
+        options: ["en un museo", "en un hotel", "en la playa", "en el tren"],
+        hint: "Es un edificio cultural donde hay arte o historia para ver.",
+        explanation: "En un museo puedes ver arte, historia y cultura. El Museo Egipcio de El Cairo es uno de los museos más famosos del mundo. Tiene más de ciento veinte mil objetos históricos."
+      },
+      {
+        text: "¿Cómo se llama el edificio donde hay arte y objetos históricos?",
+        context: "Escribes una postal desde Egipto.",
+        correct: "museo",
+        options: ["museo", "maleta", "vuelo", "autobús"],
+        hint: "Empieza con m, u, s. Es un edificio cultural muy especial.",
+        explanation: "El museo es un edificio donde puedes ver arte, historia y ciencia. En español: museo, restaurante, hotel, aeropuerto. Muchas palabras son similares en varios idiomas."
+      },
+      {
+        text: "Completa: 'El ______ de El Cairo tiene momias increíbles.'",
+        context: "Lees esto en una guía de viaje.",
+        correct: "museo",
+        options: ["museo", "restaurante", "aeropuerto", "tren"],
+        hint: "Es el lugar cultural donde hay arte y objetos históricos.",
+        explanation: "¡Correcto! El museo de El Cairo tiene momias increíbles. Las momias del antiguo Egipto son fascinantes. El museo también tiene la máscara de oro del faraón Tutankamón."
+      }
+    ]
+  },
+  {
+    country: "Japón", flag: "🇯🇵", word: "mapa",
+    definition: "Un dibujo o imagen que muestra las calles, ciudades y países. Lo usas para encontrar el camino.",
+    questions: [
+      {
+        text: "¿Qué usas para encontrar el camino en una ciudad nueva?",
+        context: "Llegas a Tokio y estás perdido en el metro.",
+        correct: "un mapa",
+        options: ["un mapa", "una maleta", "un billete", "un pasaporte"],
+        hint: "Es una imagen que muestra calles y direcciones.",
+        explanation: "Un mapa te ayuda a encontrar el camino. En Japón, los mapas son muy detallados porque ciudades como Tokio son muy grandes y complejas."
+      },
+      {
+        text: "¿Cómo se llama la imagen que muestra las calles de una ciudad?",
+        context: "Pides ayuda a una persona local en Tokio.",
+        correct: "mapa",
+        options: ["mapa", "hotel", "vuelo", "museo"],
+        hint: "Es una palabra corta de cuatro letras: M, A, P, A.",
+        explanation: "Un mapa muestra las calles y los lugares de una ciudad o país. Un mapa del metro es el plano del metro. ¿Tiene un mapa de la ciudad? es una pregunta muy útil cuando viajas."
+      },
+      {
+        text: "Completa: 'No tengo ______ de Tokio. ¡Estoy perdido!'",
+        context: "Estás perdido en una ciudad muy grande.",
+        correct: "mapa",
+        options: ["mapa", "playa", "autobús", "hotel"],
+        hint: "Es lo que necesitas para orientarte en una ciudad nueva.",
+        explanation: "¡Exacto! No tengo mapa de Tokio. ¡Estoy perdido! Hoy usamos mapas en el móvil, pero un mapa de papel también es muy útil cuando viajas."
+      }
+    ]
+  },
+  {
+    country: "Brasil", flag: "🇧🇷", word: "hotel",
+    definition: "Un edificio con habitaciones para dormir y descansar cuando viajas. Pagas por noche.",
+    questions: [
+      {
+        text: "¿Dónde duermes cuando viajas y no estás en casa?",
+        context: "Llegas a Río de Janeiro después de un largo viaje.",
+        correct: "en el hotel",
+        options: ["en el hotel", "en el aeropuerto", "en la playa", "en el museo"],
+        hint: "Es un edificio con habitaciones para dormir. Pagas por noche.",
+        explanation: "En el hotel duermes cuando viajas. Los hoteles tienen habitaciones con cama y baño. Para reservar una habitación puedes decir: ¿Tiene habitaciones libres?"
+      },
+      {
+        text: "¿Cómo se llama el edificio con habitaciones para viajeros?",
+        context: "Buscas un lugar para dormir en Brasil.",
+        correct: "hotel",
+        options: ["hotel", "tren", "maleta", "mapa"],
+        hint: "Esta palabra es idéntica en muchos idiomas. ¡La usamos en todo el mundo!",
+        explanation: "Hotel es la misma palabra en muchos idiomas. Es una de las palabras más internacionales del vocabulario de viajes. También: restaurante, aeropuerto, taxi."
+      },
+      {
+        text: "Completa: 'Mi ______ está muy cerca de la playa en Río.'",
+        context: "Describes tu alojamiento a un amigo.",
+        correct: "hotel",
+        options: ["hotel", "tren", "billete", "vuelo"],
+        hint: "Es el lugar donde te quedas a dormir durante el viaje.",
+        explanation: "¡Perfecto! Mi hotel está muy cerca de la playa en Río. Río de Janeiro es famoso por sus playas como Copacabana e Ipanema. Un hotel cerca de la playa es ideal."
+      }
+    ]
+  }
+];
+
+// ══════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════
+let state = {
+  level: 'easy',
+  destIndex: 0,
+  qIndex: 0,
+  score: 0,
+  attemptsThisQ: 0,
+  earnedStamps: [],
+  missedWords: [],
+  reviewMode: false
+};
+
+// ══════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════
+function $(id) { return document.getElementById(id); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+function updateHeaderProgress() {
+  const total = DESTINATIONS.length;
+  const pct = ((state.destIndex) / total) * 100;
+  $('progress-fill').style.width = pct + '%';
+  $('progress-label').textContent = `Destino ${state.destIndex + 1} de ${total}`;
+  $('hdr-dest').textContent = (state.destIndex + 1) + '/' + total;
+  $('hdr-score').textContent = state.score;
+}
+
+function levelLabel(l) {
+  return { easy: '🟢 Fácil', medium: '🟡 Medio', hard: '🔴 Difícil' }[l];
+}
+
+function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+// ══════════════════════════════════════════════
+//  START SCREEN
+// ══════════════════════════════════════════════
+function initStartScreen() {
+  const flags = $('route-flags');
+  flags.innerHTML = DESTINATIONS.map(d =>
+    `<span class="route-flag">${d.flag} ${d.country}</span>`
+  ).join('');
+
+  document.querySelectorAll('.level-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.level-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      state.level = card.dataset.level;
+    });
+  });
+
+  $('btn-start').addEventListener('click', startGame);
+
+  // Greet on load
+  setTimeout(() => {
+    TTS.speak('¡Bienvenido a Viajamos! Un juego de vocabulario de viajes en español. Elige tu nivel y pulsa Empezar el viaje.');
+  }, 800);
+}
+
+function startGame() {
+  state.destIndex = 0;
+  state.qIndex = 0;
+  state.score = 0;
+  state.earnedStamps = [];
+  state.missedWords = [];
+  state.reviewMode = false;
+  state.attemptsThisQ = 0;
+  $('hdr-level-pill').textContent = levelLabel(state.level);
+  $('game-header').style.display = 'flex';
+  $('progress-wrap').style.display = 'block';
+  $('audio-toolbar').style.display = 'flex';
+  updateHeaderProgress();
+  loadDestination();
+}
+
+// ══════════════════════════════════════════════
+//  DESTINATION / QUESTION
+// ══════════════════════════════════════════════
+function loadDestination() {
+  const dest = DESTINATIONS[state.destIndex];
+  state.qIndex = 0;
+  state.attemptsThisQ = 0;
+
+  $('dest-flag').textContent = dest.flag;
+  $('dest-name').textContent = dest.country;
+  $('dest-sub').textContent = `Destino ${state.destIndex + 1} de ${DESTINATIONS.length}`;
+  $('badge-word').textContent = dest.word;
+
+  updateDots();
+  loadQuestion();
+  showScreen('destination-screen');
+}
+
+function updateDots() {
+  for (let i = 0; i < 3; i++) {
+    const dot = $('dot-' + i);
+    dot.className = 'q-dot';
+    if (i < state.qIndex) dot.classList.add('done');
+    else if (i === state.qIndex) dot.classList.add('active');
+  }
+}
+
+function loadQuestion() {
+  const dest = DESTINATIONS[state.destIndex];
+  const q = dest.questions[state.qIndex];
+  state.attemptsThisQ = 0;
+
+  $('hint-card').style.display = 'none';
+  $('correct-card').style.display = 'none';
+  $('wrong-card').style.display = 'none';
+  $('btn-next').style.display = 'none';
+  $('btn-retry').style.display = 'none';
+  setSpeakingIndicator(false);
+
+  $('question-text').textContent = q.text;
+  $('question-context').textContent = q.context ? '🗺️ ' + q.context : '';
+
+  const isWrite = state.level === 'hard';
+
+  if (isWrite) {
+    $('q-type-tag').textContent = '✍️ Escribe la palabra';
+    $('q-type-tag').className = 'q-type-tag write';
+    $('options-wrap').style.display = 'none';
+    $('write-wrap').style.display = 'block';
+    $('write-input').value = '';
+    $('write-input').className = 'write-input';
+    $('write-input').disabled = false;
+    $('btn-check').onclick = () => checkWrite(q);
+    $('write-input').onkeydown = (e) => { if (e.key === 'Enter') checkWrite(q); };
+  } else {
+    $('q-type-tag').textContent = '🔤 Opción múltiple';
+    $('q-type-tag').className = 'q-type-tag mc';
+    $('options-wrap').style.display = 'block';
+    $('write-wrap').style.display = 'none';
+    renderOptions(q);
+  }
+
+  // Build speech for this question
+  const qNum = state.qIndex + 1;
+  const destAnnounce = state.qIndex === 0
+    ? `Destino ${state.destIndex + 1}: ${dest.country}. La palabra de este destino es: ${dest.word}. `
+    : '';
+
+  let speechParts = [
+    destAnnounce + `Pregunta ${qNum}. ${q.text}`,
+    q.context
+  ];
+
+  // For easy: also read hint upfront
+  if (state.level === 'easy') {
+    $('hint-card').style.display = 'block';
+    $('hint-text').textContent = q.hint;
+    speechParts.push(`Pista: ${q.hint}`);
+  }
+
+  // For MC: read options
+  if (!isWrite) {
+    const opts = Array.from(document.querySelectorAll('.option-btn')).map((b, i) => {
+      const letters = ['A', 'B', 'C', 'D'];
+      return `${letters[i]}: ${b.dataset.val}`;
+    });
+    speechParts.push('Las opciones son: ' + opts.join('. '));
+  } else {
+    speechParts.push('Escribe tu respuesta en el campo de texto.');
+    // Focus after short delay
+    setTimeout(() => $('write-input').focus(), 300);
+  }
+
+  // Speak after brief delay so screen renders first
+  setTimeout(() => TTS.speakSequence(speechParts), 400);
+}
+
+function renderOptions(q) {
+  const grid = $('options-grid');
+  const opts = shuffle(q.options);
+  const letters = ['A', 'B', 'C', 'D'];
+  grid.innerHTML = opts.map((opt, i) =>
+    `<button class="option-btn" data-val="${opt}">
+       <span class="option-letter">${letters[i]}</span>${opt}
+     </button>`
+  ).join('');
+  grid.querySelectorAll('.option-btn').forEach(btn => {
+    btn.addEventListener('click', () => checkMC(btn, q));
+  });
+}
+
+function checkMC(btn, q) {
+  const val = btn.dataset.val;
+  grid_btns().forEach(b => b.disabled = true);
+  if (val === q.correct) {
+    btn.classList.add('correct');
+    onCorrect(q);
+  } else {
+    btn.classList.add('wrong');
+    grid_btns().forEach(b => { if (b.dataset.val === q.correct) b.classList.add('correct'); });
+    onWrong(q);
+  }
+}
+
+function checkWrite(q) {
+  const input = $('write-input');
+  const val = input.value.trim().toLowerCase();
+  const correct = q.correct.toLowerCase();
+  if (val === correct) {
+    input.classList.add('correct');
+    input.disabled = true;
+    onCorrect(q);
+  } else {
+    input.classList.add('wrong');
+    input.disabled = true;
+    onWrong(q);
+  }
+}
+
+function onCorrect(q) {
+  const points = state.attemptsThisQ === 0 ? 10 : 5;
+  state.score += points;
+  $('hdr-score').textContent = state.score;
+
+  $('correct-card').style.display = 'block';
+  $('correct-explanation').textContent = q.explanation;
+  $('btn-next').style.display = 'block';
+  $('btn-next').textContent = state.qIndex < 2 ? 'Siguiente pregunta →' : '¡Llegamos! 🎉';
+  $('btn-next').onclick = () => advanceQ();
+
+  const nextLabel = state.qIndex < 2 ? 'Pulsa Siguiente pregunta para continuar.' : 'Pulsa Llegamos para ver tu sello.';
+  TTS.speakSequence([`¡Correcto! ${points} puntos. ${q.explanation}`, nextLabel]);
+}
+
+function onWrong(q) {
+  state.attemptsThisQ++;
+  $('hint-card').style.display = 'block';
+  $('hint-text').textContent = q.hint;
+  $('wrong-card').style.display = 'block';
+  $('wrong-explanation').textContent = `La respuesta correcta es: "${q.correct}". ${q.explanation}`;
+
+  if (!state.missedWords.includes(DESTINATIONS[state.destIndex].word)) {
+    state.missedWords.push(DESTINATIONS[state.destIndex].word);
+  }
+
+  const retryMsg = state.level !== 'easy' ? 'Pulsa Intentar otra vez para repetir la pregunta.' : '';
+  const continueMsg = 'O pulsa Continuar para la siguiente pregunta.';
+
+  if (state.level !== 'easy') {
+    $('btn-retry').style.display = 'block';
+    $('btn-retry').onclick = () => retryQ(q);
+  }
+  $('btn-next').style.display = 'block';
+  $('btn-next').textContent = state.qIndex < 2 ? 'Continuar →' : 'Ver llegada →';
+  $('btn-next').onclick = () => advanceQ();
+
+  TTS.speakSequence([
+    `No es correcto. La respuesta correcta es: ${q.correct}.`,
+    `Pista: ${q.hint}.`,
+    q.explanation,
+    retryMsg,
+    continueMsg
+  ]);
+}
+
+function retryQ(q) {
+  $('wrong-card').style.display = 'none';
+  $('btn-retry').style.display = 'none';
+  $('btn-next').style.display = 'none';
+
+  if (state.level === 'hard') {
+    const input = $('write-input');
+    input.value = '';
+    input.className = 'write-input';
+    input.disabled = false;
+    input.focus();
+  } else {
+    renderOptions(q);
+    $('hint-card').style.display = 'block';
+    $('hint-text').textContent = q.hint;
+  }
+
+  // Re-read the question
+  const letters = ['A', 'B', 'C', 'D'];
+  const opts = Array.from(document.querySelectorAll('.option-btn')).map((b, i) => `${letters[i]}: ${b.dataset.val}`);
+  TTS.speakSequence([
+    `Intentamos de nuevo. ${q.text}`,
+    q.context,
+    `Pista: ${q.hint}`,
+    state.level !== 'hard' ? 'Las opciones son: ' + opts.join('. ') : 'Escribe tu respuesta.'
+  ]);
+}
+
+function grid_btns() { return document.querySelectorAll('.option-btn'); }
+
+function advanceQ() {
+  TTS.stop();
+  if (state.qIndex < 2) {
+    state.qIndex++;
+    updateDots();
+    loadQuestion();
+  } else {
+    showArrival();
+  }
+}
+
+// ══════════════════════════════════════════════
+//  ARRIVAL
+// ══════════════════════════════════════════════
+function showArrival() {
+  const dest = DESTINATIONS[state.destIndex];
+  state.earnedStamps.push(state.destIndex);
+
+  const perf = state.missedWords.includes(dest.word) ? 'partial' : 'perfect';
+  const msgs = {
+    perfect: ['¡Excelente trabajo!', '¡Perfecto! ¡Eres un gran viajero!', '¡Fantástico! Sin errores.'],
+    partial: ['¡Bien hecho! Sigue practicando.', '¡Lo conseguiste! La práctica hace al maestro.', '¡Muy bien! Puedes mejorar.']
+  };
+  const msg = msgs[perf][Math.floor(Math.random() * 3)];
+
+  $('arrival-title').textContent = msg;
+  $('arrival-text').textContent = `Sello de ${dest.country} añadido a tu pasaporte.`;
+  $('arrival-stamp').textContent = dest.flag;
+  $('arrival-emoji').textContent = perf === 'perfect' ? '🎉' : '👍';
+  $('arrival-word-es').textContent = dest.word;
+  $('arrival-word-def').textContent = dest.definition;
+
+  if (perf === 'perfect') spawnConfetti();
+
+  const isLast = state.destIndex >= DESTINATIONS.length - 1;
+  $('btn-continue').textContent = isLast ? 'Ver resultados finales →' : 'Siguiente destino →';
+  $('btn-continue').onclick = () => {
+    TTS.stop();
+    state.destIndex++;
+    if (state.destIndex < DESTINATIONS.length) {
+      updateHeaderProgress();
+      loadDestination();
+    } else {
+      showFinal();
+    }
+  };
+
+  // Speech for arrival
+  const arrivalSpeech = [
+    msg,
+    `Has completado ${dest.country}.`,
+    `La palabra de este destino era: ${dest.word}.`,
+    dest.definition,
+    isLast ? 'Pulsa Ver resultados finales.' : 'Pulsa Siguiente destino para continuar el viaje.'
+  ];
+  setTimeout(() => TTS.speakSequence(arrivalSpeech), 300);
+
+  showScreen('arrival-screen');
+}
+
+// ══════════════════════════════════════════════
+//  FINAL
+// ══════════════════════════════════════════════
+function showFinal() {
+  $('game-header').style.display = 'none';
+  $('progress-wrap').style.display = 'none';
+
+  const max = DESTINATIONS.length * 3 * 10;
+  const pct = state.score / max;
+  const stars = pct >= 0.85 ? '⭐⭐⭐' : pct >= 0.6 ? '⭐⭐' : '⭐';
+  const messages = {
+    '⭐⭐⭐': '¡Increíble! Eres un viajero experto en español.',
+    '⭐⭐': '¡Muy bien! Con un poco más de práctica serás perfecto.',
+    '⭐': '¡Buen intento! Repasa las palabras y vuelve a intentarlo.'
+  };
+
+  $('final-stars').textContent = stars;
+  $('final-score').textContent = state.score;
+  $('final-score-label').textContent = `puntos de ${max} posibles`;
+  $('final-message').textContent = messages[stars];
+
+  const vt = $('vocab-table');
+  vt.innerHTML = DESTINATIONS.map(d =>
+    `<div class="vocab-item ${state.missedWords.includes(d.word) ? 'missed' : ''}">
+       <span class="vi-flag">${d.flag}</span>
+       <div>
+         <div class="vi-word">${d.word}</div>
+         <div class="vi-def">${d.country}</div>
+       </div>
+     </div>`
+  ).join('');
+
+  if (state.missedWords.length > 0) {
+    $('missed-wrap').style.display = 'block';
+    $('missed-table').innerHTML = DESTINATIONS
+      .filter(d => state.missedWords.includes(d.word))
+      .map(d =>
+        `<div class="vocab-item missed">
+           <span class="vi-flag">${d.flag}</span>
+           <div>
+             <div class="vi-word">${d.word}</div>
+             <div class="vi-def">${d.definition}</div>
+           </div>
+         </div>`
+      ).join('');
+    $('btn-review').style.display = 'block';
+  }
+
+  $('btn-replay').onclick = () => {
+    TTS.stop();
+    showScreen('start-screen');
+    $('game-header').style.display = 'none';
+    $('progress-wrap').style.display = 'none';
+    $('audio-toolbar').style.display = 'none';
+    setTimeout(() => TTS.speak('¡Bienvenido de nuevo a Viajamos! Elige tu nivel y pulsa Empezar el viaje.'), 400);
+  };
+  $('btn-review').onclick = reviewMissed;
+  $('btn-passport-final').onclick = showPassport;
+
+  spawnConfetti();
+
+  // Final speech
+  const learnedWords = DESTINATIONS.map(d => d.word).join(', ');
+  const missedSpeech = state.missedWords.length > 0
+    ? `Las palabras para practicar más son: ${state.missedWords.join(', ')}.`
+    : 'No tienes palabras para repasar. ¡Lo hiciste perfecto!';
+
+  setTimeout(() => TTS.speakSequence([
+    '¡Viaje completado!',
+    messages[stars],
+    `Tu puntuación es ${state.score} de ${max} puntos.`,
+    `Las palabras que aprendiste son: ${learnedWords}.`,
+    missedSpeech
+  ]), 400);
+
+  showScreen('final-screen');
+}
+
+function reviewMissed() {
+  TTS.stop();
+  const missedDests = DESTINATIONS.filter(d => state.missedWords.includes(d.word));
+  if (missedDests.length === 0) return;
+  state.destIndex = DESTINATIONS.findIndex(d => d.word === missedDests[0].word);
+  state.qIndex = 0;
+  state.attemptsThisQ = 0;
+  state.score = 0;
+  state.earnedStamps = [];
+  state.reviewMode = true;
+  $('game-header').style.display = 'flex';
+  $('progress-wrap').style.display = 'block';
+  updateHeaderProgress();
+  loadDestination();
+}
+
+// ══════════════════════════════════════════════
+//  PASSPORT
+// ══════════════════════════════════════════════
+function showPassport() {
+  TTS.stop();
+  const grid = $('stamps-grid');
+  grid.innerHTML = DESTINATIONS.map((d, i) => {
+    const earned = state.earnedStamps.includes(i);
+    return `<div class="stamp-slot ${earned ? 'earned' : ''}">
+      ${earned
+        ? `<span class="stamp-flag">${d.flag}</span><span class="stamp-word">${d.word}</span>`
+        : `<span style="font-size:1.2rem">?</span><span>${d.country}</span>`}
+    </div>`;
+  }).join('');
+
+  $('btn-back-from-passport').onclick = () => { TTS.stop(); showScreen('final-screen'); };
+
+  const earnedList = DESTINATIONS.filter((d, i) => state.earnedStamps.includes(i)).map(d => `${d.country}: ${d.word}`);
+  setTimeout(() => TTS.speakSequence([
+    'Tu pasaporte de aprendizaje.',
+    `Tienes ${earnedList.length} sellos.`,
+    ...earnedList
+  ]), 300);
+
+  showScreen('passport-screen');
+}
+
+// ══════════════════════════════════════════════
+//  CONFETTI
+// ══════════════════════════════════════════════
+function spawnConfetti() {
+  const wrap = $('confetti');
+  const colors = ['#f5a623','#1a6fad','#3a9c6f','#e8604c','#a855f7','#ec4899'];
+  wrap.innerHTML = '';
+  for (let i = 0; i < 60; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-duration:${1.2 + Math.random()*1.8}s;
+      animation-delay:${Math.random()*0.6}s;
+      width:${6+Math.random()*6}px;
+      height:${6+Math.random()*6}px;
+      border-radius:${Math.random()>0.5?'50%':'2px'};
+    `;
+    wrap.appendChild(el);
+  }
+  setTimeout(() => { wrap.innerHTML = ''; }, 3000);
+}
+
+// ══════════════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════════════
+TTS.init();
+initStartScreen();
+</script>
+</body>
+</html>
